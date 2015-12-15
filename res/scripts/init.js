@@ -501,12 +501,20 @@ $api.on($script, 'twitchSubscribe', function (event) {
     $.hook.call('twitchSubscribe', event, true);
 });
 
+$api.on($script, 'twitchResubscribe', function (event) {
+    $.hook.call('twitchResubscribe', event, true);
+});
+
 $api.on($script, 'twitchUnsubscribe', function (event) {
     $.hook.call('twitchUnsubscribe', event, true);
 });
 
 $api.on($script, 'twitchSubscribesInitialized', function (event) {
     $.hook.call('twitchSubscribesInitialized', event, true);
+});
+
+$api.on($script, 'donation', function (event) {
+    $.hook.call('donation', event, true);
 });
 
 $api.on($script, 'ircChannelJoin', function (event) {

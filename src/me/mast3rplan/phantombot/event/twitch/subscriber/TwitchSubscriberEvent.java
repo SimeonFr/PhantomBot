@@ -24,10 +24,12 @@ public abstract class TwitchSubscriberEvent extends TwitchEvent
 
     private final String subscriber;
     private final Type type;
+    private final int month;
 
     public enum Type
     {
 
+        RESUBSCRIBE,
         SUBSCRIBE,
         UNSUBSCRIBE;
     }
@@ -36,6 +38,7 @@ public abstract class TwitchSubscriberEvent extends TwitchEvent
     {
         this.subscriber = subscriber;
         this.type = type;
+        this.month = 0;
     }
 
     protected TwitchSubscriberEvent(String subscriber, Type type, Channel channel)
@@ -43,6 +46,22 @@ public abstract class TwitchSubscriberEvent extends TwitchEvent
         super(channel);
         this.subscriber = subscriber;
         this.type = type;
+        this.month = 0;
+    }
+
+    protected TwitchSubscriberEvent(String subscriber, Type type, int month)
+    {
+        this.subscriber = subscriber;
+        this.type = type;
+        this.month = month;
+    }
+
+    protected TwitchSubscriberEvent(String subscriber, Type type, int month, Channel channel)
+    {
+        super(channel);
+        this.subscriber = subscriber;
+        this.type = type;
+        this.month = month;
     }
 
     public String getSubscriber()
@@ -55,8 +74,13 @@ public abstract class TwitchSubscriberEvent extends TwitchEvent
         return type;
     }
 
+    public int getMonth()
+    {
+        return month;
+    }
+
     public String toEventSocket()
     {
-    	return this.getSubscriber() + "|" + this.getType();
+    	return this.getSubscriber() + "|" + this.getType() + "|" + this.getMonth();
     }
 }

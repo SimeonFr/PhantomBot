@@ -1,11 +1,50 @@
+var EventBus = Packages.me.mast3rplan.phantombot.event.EventBus;
+var DonationEvent = Packages.me.mast3rplan.phantombot.event.donation.DonationEvent;
+
+
+$.on('donation', function (event) {
+    var donator = event.getDonator().toLowerCase();
+    var username = $.username.resolve(donator);
+    var amount = event.getAmount();
+    var message = event.getMessage();
+    var p = $.donationReward * amount;
+    $.say(username+" donated "+amount+" with this Message: "+message);
+
+	if (!$.inidb.FileExists("donations")) {
+		var id = 0
+	} else {
+	    var id = $.inidb.GetKeyList("donations")[0];
+	}
+    $.say(id[0]);
+    return;
+    $.inidb.set("donations", id, username+"|"+amount+"|"+message);
+
+    if ($.announceDonations == 1 && $.moduleEnabled("./handlers/donationHandler.js")) {
+        var s = $.lang.get("net.phantombot.donationhandler.new-donation");
+        s = $.replaceAll(s, '(name)', username);
+        s = $.replaceAll(s, '(amount)', amount);
+        s = $.replaceAll(s, '(message)', message);
+        
+        if ($.moduleEnabled("./systems/pointSystem.js")) {
+            s = $.replaceAll(s, '(pointname)', $.getPointsString(p));
+            s = $.replaceAll(s, '(reward)', p.toString());
+        }
+    }
+
+    $.writeToFile(username+": "+amount, "./web/latestdonation.txt", false);
+    if ($.moduleEnabled("./systems/pointSystem.js") && p > 0) {
+        $.inidb.incr('points', follower, p);
+    }
+});
+
 $.checkerstorepath = $.inidb.get('settings','checker_storepath');
 if ($.checkerstorepath == null || $.checkerstorepath == "" || $.strlen($.checkerstorepath) == 0) {
     $.checkerstorepath = "addons/donationchecker/latestdonation.txt";
 }
 
-$.donation_toggle = $.inidb.get('settings','donation_toggle');
-if ($.donation_toggle == null || $.donation_toggle == "" || $.strlen($.donation_toggle) == 0) {
-    $.donation_toggle = 1;
+$.announceDonations = $.inidb.get('settings','announceDonations');
+if ($.announceDonations == null || $.announceDonations == "" || $.strlen($.announceDonations) == 0) {
+    $.announceDonations = 1;
 }
 
 $.on('command', function (event) {
@@ -55,14 +94,14 @@ $.on('command', function (event) {
         }
 
         if (action.equalsIgnoreCase("toggle")) {
-            if ($.donation_toggle == 1) {
-                $.inidb.set('settings','donation_toggle', 0);
-                $.donation_toggle = 0;
+            if ($.announceDonations == 1) {
+                $.inidb.set('settings','announceDonations', 0);
+                $.announceDonations = 0;
                 $.say($.getWhisperString(sender) + $.lang.get("net.phantombot.donationhandler.donation-toggle-off"));
                 return;
             } else {
-                $.inidb.set('settings','donation_toggle', 1);
-                $.donation_toggle = 1;
+                $.inidb.set('settings','announceDonations', 1);
+                $.announceDonations = 1;
                 $.say($.getWhisperString(sender) + $.lang.get("net.phantombot.donationhandler.donation-toggle-on"));
                 return;
             }
@@ -79,13 +118,7 @@ setTimeout(function(){
             if ($var.currDonation.toString() != $.inidb.get("settings", "lastdonation")) {
                 if ($var.currDonation.toString() != null || $var.currDonation.toString() != "") {
                     $.inidb.set("settings", "lastdonation", $.readFile($.checkerstorepath));
-                    if ($.donation_toggle == 1) {
-                        $.say($.username.resolve($.ownerName) + $.lang.get("net.phantombot.donationhandler.new-donation", $.readFile($.checkerstorepath)));
-                        return;
-                    } else if ($.donation_toggle == 0) {
-                        $.say($.username.resolve($.ownerName) + $.lang.get("net.phantombot.donationhandler.new-donation", $.readFile($.checkerstorepath)));
-                        return;
-                    }
+        		    EventBus.instance().post(new DonationEvent($.readFile($.checkerstorepath).toString(), 0));
                 }
             }
         }, 10 * 1000);

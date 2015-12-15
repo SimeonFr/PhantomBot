@@ -1,3 +1,7 @@
+var EventBus = Packages.me.mast3rplan.phantombot.event.EventBus;
+var TwitchSubscribeEvent = Packages.me.mast3rplan.phantombot.event.twitch.subscriber.TwitchSubscribeEvent;
+var TwitchResubscribeEvent = Packages.me.mast3rplan.phantombot.event.twitch.subscriber.TwitchResubscribeEvent;
+
 $.subscribemode = $.inidb.get('settings', 'subscribemode');
 $.sub_silentmode = $.inidb.get('settings', 'sub_silentmode');
 $.subscribeMessage = $.inidb.get('settings', 'subscribemessage');
@@ -29,7 +33,6 @@ if ($.subscribemode.equalsIgnoreCase("twitchnotify")) {
 }
 
 $.on('twitchSubscribe', function(event) {
-
     var subscriber = event.getSubscriber().toLowerCase();
     var username = $.username.resolve(subscriber);
     var subscribed = $.inidb.get('subscribed', subscriber);
@@ -43,16 +46,17 @@ $.on('twitchSubscribe', function(event) {
         $.inidb.set("group", subscriber, 3);
     }
     
+    var p = parseInt($.inidb.get('settings', 'subscribereward'));
+    if (isNaN(p)) {
+        p = 100;
+    }
+    if ($.moduleEnabled("./systems/pointSystem.js") && p > 0) {
+        $.inidb.incr('points', subscriber, p);
+    }
+
     if ($.announceSubscribes) {
 
-        var p = parseInt($.inidb.get('settings', 'subscribereward'));
         var s = $.subscribeMessage;
-
-
-        if (isNaN(p)) {
-            p = 100;
-        }
-
         s = $.replaceAll(s, '(name)', username);
 
         if ($.moduleEnabled("./systems/pointSystem.js")) {
@@ -64,9 +68,46 @@ $.on('twitchSubscribe', function(event) {
             $.say(s);
         }
     }
-        
+});
+
+$.on('twitchResubscribe', function(event) {
+
+    var subscriber = event.getSubscriber().toLowerCase();
+    var username = $.username.resolve(subscriber);
+    var subscribed = $.inidb.get('subscribed', subscriber);
+    var month = event.getMonth();
+    
+    if (subscribed == null || subscribed == undefined || subscribed.isEmpty() || parseInt(subscribed) == 0) {
+        $.inidb.set('subscribed', subscriber, month);      
+    } 
+    
+    if($.isAdmin(subscriber) == false || $.isModv3(subscriber, event.getTags()) == false) {
+        $.inidb.set("tempsubgroup", subscriber, $.inidb.get("group",subscriber));
+        $.inidb.set("group", subscriber, 3);
+    }
+    
+    var p = parseInt($.inidb.get('settings', 'subscribereward'));
+    if (isNaN(p)) {
+        p = 100;
+    }
     if ($.moduleEnabled("./systems/pointSystem.js") && p > 0) {
         $.inidb.incr('points', subscriber, p);
+    }
+
+    if ($.announceSubscribes) {
+
+        var s = "(name) resubscribed for the (month) time!";
+        s = $.replaceAll(s, '(name)', username);
+        s = $.replaceAll(s, '(month)', month);
+
+        if ($.moduleEnabled("./systems/pointSystem.js")) {
+            s = $.replaceAll(s, '(pointname)', $.getPointsString(p));
+            s = $.replaceAll(s, '(reward)', p.toString());
+        }
+        
+        if ($.sub_silentmode == 0) {
+            $.say(s);
+        }
     }
 });
 
@@ -238,12 +279,12 @@ $.on('command', function(event) {
 $.on('ircPrivateMessage', function(event) {
     if (event.getSender().equalsIgnoreCase("twitchnotify")) {
         var message = event.getMessage().toLowerCase();
-        if (message.indexOf("just subscribed") != -1 || message.indexOf("subscribed for") != -1) {
-            var spl = message.split(" ");
-            var EventBus = Packages.me.mast3rplan.phantombot.event.EventBus;
-            var TwitchSubscribeEvent = Packages.me.mast3rplan.phantombot.event.twitch.subscriber.TwitchSubscribeEvent;
-            
+        var spl = message.split(" ");
+        if (message.indexOf("just subscribed") != -1) {
             EventBus.instance().post(new TwitchSubscribeEvent(spl[0]));
+        }
+        else if (message.indexOf("subscribed for") != -1) {
+            EventBus.instance().post(new TwitchResubscribeEvent(spl[0], spl[3]));
         }
     } 
 });
